@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>TTF 转二进制 H 工具（大文件优化）</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Consolas', 'Microsoft YaHei', sans-serif;
+        }
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1rem;
+            gap: 1.5rem;
+            background: url('https://picsum.photos/id/15/1920/1080') no-repeat center center fixed;
+            background-size: cover;
+            position: relative;
+            overflow-x: hidden;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            z-index: -1;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+            transition: all 0.3s ease;
+        }
+        .glass-card:hover {
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+        .header {
+            width: 100%;
+            max-width: 800px;
+            padding: 1.5rem 1rem;
+            text-align: center;
+            color: #2c3e50;
+        }
+        .tool-name {
+            font-size: 2rem;
+            font-weight: bold;
+            background: linear-gradient(90deg, #2ecc71, #3498db, #9b59b6);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 0 10px rgba(46, 204, 113, 0.3);
+        }
+        .author-info {
+            font-size: 1rem;
+            color: #34495e;
+            margin-top: 0.8rem;
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+        }
+        .main-container {
+            width: 100%;
+            max-width: 800px;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        .upload-area {
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            padding: 3rem 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .upload-area:hover {
+            border-color: #3498db;
+            background: rgba(52, 152, 219, 0.05);
+        }
+        .upload-icon {
+            font-size: 3rem;
+            color: #34495e;
+            margin-bottom: 1rem;
+        }
+        .upload-text {
+            font-size: 1.1rem;
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+        .upload-tip {
+            font-size: 0.9rem;
+            color: #888;
+        }
+        #file-input {
+            display: none;
+        }
+        .config-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+        .config-label {
+            font-size: 1rem;
+            color: #34495e;
+            font-weight: 500;
+        }
+        .text-input {
+            padding: 0.9rem 1.2rem;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            color: #2c3e50;
+            font-size: 1rem;
+        }
+        .text-input::placeholder {
+            color: #888;
+        }
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .btn {
+            padding: 1rem 1.8rem;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(90deg, #2ecc71, #3498db);
+            color: #fff;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 12px rgba(46, 204, 113, 0.4);
+            font-size: 1rem;
+        }
+        .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(46, 204, 113, 0.7);
+        }
+        .btn-outline {
+            background: transparent;
+            border: 1px solid #9b59b6;
+            color: #9b59b6;
+            box-shadow: 0 0 12px rgba(155, 89, 182, 0.4);
+        }
+        .btn-outline:hover {
+            background: rgba(155, 89, 182, 0.1);
+            box-shadow: 0 0 20px rgba(155, 89, 182, 0.7);
+        }
+        .btn-cancel {
+            border-color: #e74c3c;
+            color: #e74c3c;
+        }
+        .btn-cancel:hover {
+            background: rgba(231, 76, 60, 0.1);
+            box-shadow: 0 0 20px rgba(231, 76, 60, 0.7);
+        }
+        .result-container {
+            width: 100%;
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            color: #2c3e50;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            white-space: pre;
+            scrollbar-width: thin;
+        }
+        .result-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        .result-container::-webkit-scrollbar-thumb {
+            background: rgba(52, 152, 219, 0.5);
+            border-radius: 3px;
+        }
+        .file-info {
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            color: #34495e;
+            font-size: 0.95rem;
+            display: none;
+        }
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 0.8rem 1.5rem;
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            color: #2c3e50;
+            border-radius: 10px;
+            font-size: 1rem;
+            z-index: 999;
+            display: none;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            font-weight: 500;
+        }
+        .progress-group {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            display: none;
+        }
+        .progress-container {
+            width: 100%;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #2ecc71, #3498db);
+            width: 0%;
+            transition: width 0.05s linear;
+        }
+        .progress-text {
+            font-size: 0.9rem;
+            color: #34495e;
+            text-align: center;
+        }
+        .tips-box {
+            padding: 1rem;
+            background: rgba(52, 152, 219, 0.05);
+            border-left: 3px solid #3498db;
+            border-radius: 8px;
+            color: #34495e;
+            font-size: 0.9rem;
+        }
+        @media (max-width: 600px) {
+            .tool-name {
+                font-size: 1.6rem;
+            }
+            .main-container {
+                padding: 1.2rem;
+            }
+            .upload-area {
+                padding: 2rem 1rem;
+            }
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header glass-card">
+        <div class="tool-name">TTF 转二进制 H 头文件工具</div>
+        <div class="author-info">
+            <span>作者:椎名</span>
+            <span>频道:@Mahiru</span>
+        </div>
+    </div>
+    <div class="main-container glass-card">
+        <label class="upload-area" for="file-input">
+            <div class="upload-icon">📁</div>
+            <div class="upload-text">点击上传 TTF 字体文件</div>
+            <div class="upload-tip">支持 TTF 格式 | 纯本地转换，不上传服务器</div>
+            <input type="file" id="file-input" accept=".ttf">
+        </label>
+        <div class="file-info" id="file-info">
+            文件名：<span id="file-name">--</span> | 大小：<span id="file-size">--</span>
+        </div>
+        <div class="tips-box">
+            ⚠️ 提示：大文件（>10MB）转换时会分块生成，请勿关闭页面，转换完成后可直接下载.h文件（无需查看结果面板）
+        </div>
+        <div class="config-group">
+            <label class="config-label">数组变量名（默认：font_data）：</label>
+            <input type="text" class="text-input" id="array-name" placeholder="输入C语言数组变量名" value="font_data">
+        </div>
+        <div class="config-group">
+            <label class="config-label">头文件宏定义（默认：FONT_DATA_H）：</label>
+            <input type="text" class="text-input" id="header-define" placeholder="输入宏定义名称（自动大写）" value="FONT_DATA_H">
+        </div>
+        <div class="btn-group">
+            <button class="btn" id="convert-btn" disabled>开始转换</button>
+            <button class="btn btn-outline btn-cancel" id="cancel-btn" disabled>取消转换</button>
+            <button class="btn btn-outline" id="copy-btn" disabled>复制 H 内容</button>
+            <button class="btn btn-outline" id="download-btn" disabled>下载 .h 文件</button>
+        </div>
+        <div class="progress-group" id="progress-group">
+            <div class="progress-container">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
+            <div class="progress-text" id="progress-text">转换中... 0%（读取文件）</div>
+        </div>
+        <div class="config-label">转换结果（大文件建议直接下载）：</div>
+        <div class="result-container" id="result-container">
+            上传 TTF 文件并点击「开始转换」后，将显示二进制数组（大文件请查看下载的.h文件）...
+        </div>
+    </div>
+    <div class="toast" id="toast">操作成功！</div>
+    <script>
+        const fileInput = document.getElementById('file-input');
+        const fileInfo = document.getElementById('file-info');
+        const fileName = document.getElementById('file-name');
+        const fileSize = document.getElementById('file-size');
+        const arrayName = document.getElementById('array-name');
+        const headerDefine = document.getElementById('header-define');
+        const convertBtn = document.getElementById('convert-btn');
+        const cancelBtn = document.getElementById('cancel-btn');
+        const copyBtn = document.getElementById('copy-btn');
+        const downloadBtn = document.getElementById('download-btn');
+        const resultContainer = document.getElementById('result-container');
+        const toast = document.getElementById('toast');
+        const progressGroup = document.getElementById('progress-group');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        
+        let ttfFile = null;
+        let hContent = '';
+        let isConverting = false;
+        let abortController = null;
+        const CHUNK_SIZE = 131072;
+        const MAX_DISPLAY_LENGTH = 10000;
+
+        // 上传文件
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            if (file.type !== 'application/x-font-ttf' && !file.name.endsWith('.ttf')) {
+                showToast('请上传 TTF 格式的字体文件');
+                return;
+            }
+            ttfFile = file;
+            fileName.textContent = file.name;
+            fileSize.textContent = formatFileSize(file.size);
+            fileInfo.style.display = 'block';
+            convertBtn.disabled = false;
+            resultContainer.textContent = `已加载文件：${file.name}\n大文件请直接下载.h文件，无需查看结果面板...`;
+            resetProgress();
+        });
+
+        // 开始转换
+        convertBtn.addEventListener('click', async () => {
+            if (!ttfFile || isConverting) return;
+            isConverting = true;
+            convertBtn.disabled = true;
+            cancelBtn.disabled = false;
+            progressGroup.style.display = 'flex';
+            resultContainer.textContent = `正在转换 ${ttfFile.name}...大文件转换需要时间，请稍候...`;
+            abortController = new AbortController();
+            const signal = abortController.signal;
+
+            try {
+                const uint8Array = await readFileInChunks(ttfFile, (progress) => {
+                    if (signal.aborted) throw new Error('转换已取消');
+                    progressBar.style.width = `${progress}%`;
+                    progressText.textContent = `转换中... ${Math.round(progress)}%（读取文件）`;
+                }, signal);
+
+                if (signal.aborted) return;
+
+                progressBar.style.width = '80%';
+                progressText.textContent = `转换中... 80%（生成数组）`;
+                const arrayContent = await generateArrayContentAsync(uint8Array, signal);
+
+                if (signal.aborted) return;
+
+                progressBar.style.width = '90%';
+                progressText.textContent = `转换中... 90%（拼接文件）`;
+                generateHContent(uint8Array.length, arrayContent);
+
+                if (signal.aborted) return;
+
+                progressBar.style.width = '100%';
+                progressText.textContent = `转换完成！100%`;
+                showToast('转换成功！大文件请下载.h文件查看');
+                copyBtn.disabled = false;
+                downloadBtn.disabled = false;
+
+                resultContainer.textContent = hContent.length > MAX_DISPLAY_LENGTH 
+                    ? `${hContent.substring(0, MAX_DISPLAY_LENGTH)}...\n\n【大文件已截断显示，完整内容请下载.h文件】`
+                    : hContent;
+
+                setTimeout(() => {
+                    progressGroup.style.display = 'none';
+                }, 3000);
+            } catch (err) {
+                resultContainer.textContent = err.message === '转换已取消' ? '转换已取消' : `转换失败：${err.message}`;
+                showToast(resultContainer.textContent);
+                resetProgress();
+            } finally {
+                isConverting = false;
+                convertBtn.disabled = false;
+                cancelBtn.disabled = true;
+                abortController = null;
+            }
+        });
+
+        // 取消转换
+        cancelBtn.addEventListener('click', () => {
+            if (abortController) {
+                abortController.abort();
+                showToast('正在取消转换...');
+            }
+        });
+
+        // 分块读取文件
+        function readFileInChunks(file, progressCallback, signal) {
+            return new Promise((resolve, reject) => {
+                if (signal.aborted) return reject(new Error('转换已取消'));
+                const fileSize = file.size;
+                let offset = 0;
+                const chunks = [];
+                const reader = new FileReader();
+
+                reader.onload = function(e) {
+                    if (signal.aborted) return reject(new Error('转换已取消'));
+                    const chunk = new Uint8Array(e.target.result);
+                    chunks.push(chunk);
+                    offset += chunk.length;
+                    const progress = (offset / fileSize) * 80;
+                    progressCallback(progress);
+                    if (offset < fileSize) readNextChunk();
+                    else {
+                        const total = chunks.reduce((a,b)=>a+b.length,0);
+                        const res = new Uint8Array(total);
+                        let p=0; chunks.forEach(c=>{res.set(c,p);p+=c.length;});
+                        resolve(res);
+                    }
+                };
+                reader.onerror = ()=>reject(new Error('文件读取错误'));
+                reader.onabort = ()=>reject(new Error('读取被取消'));
+
+                function readNextChunk() {
+                    if (signal.aborted) return reject(new Error('转换已取消'));
+                    reader.readAsArrayBuffer(file.slice(offset, offset+CHUNK_SIZE));
+                }
+                readNextChunk();
+            });
+        }
+
+        // 异步生成数组
+        function generateArrayContentAsync(uint8Array, signal) {
+            return new Promise((resolve, reject) => {
+                if (signal.aborted) return reject(new Error('转换已取消'));
+                const total = uint8Array.length;
+                let idx = 0;
+                const arr = [];
+                function proc(deadline) {
+                    if (signal.aborted) return reject(new Error('转换已取消'));
+                    while(idx<total && deadline.timeRemaining()>1) {
+                        const h = uint8Array[idx].toString(16).padStart(2,'0');
+                        arr.push(`0x${h}`);
+                        if((idx+1)%16===0) arr.push('\n');
+                        idx++;
+                    }
+                    if(idx>=total) resolve(arr.join(', ').replace(/, \n$/g,'\n'));
+                    else requestIdleCallback(proc);
+                }
+                requestIdleCallback(proc);
+            });
+        }
+
+        // 生成头文件内容
+        function generateHContent(fileLen, arrayContent) {
+            const name = arrayName.value.trim() || 'font_data';
+            const def = (headerDefine.value.trim() || 'FONT_DATA_H').toUpperCase();
+            const parts = [
+                `#ifndef ${def}\n`,
+                `#define ${def}\n\n`,
+                `// 自动生成：${ttfFile.name}\n`,
+                `// 大小：${formatFileSize(ttfFile.size)}\n`,
+                `// 时间：${new Date().toLocaleString()}\n\n`,
+                `#include <stdint.h>\n\n`,
+                `const uint8_t ${name}[] = {\n`,
+                arrayContent,
+                `\n};\n\n`,
+                `const uint32_t ${name}_len = ${fileLen};\n\n`,
+                `#endif // ${def}\n`
+            ];
+            hContent = parts.join('');
+        }
+
+        // 复制
+        copyBtn.addEventListener('click', () => {
+            if (!hContent) { showToast('暂无结果'); return; }
+            const txt = hContent.length>MAX_DISPLAY_LENGTH 
+                ? hContent.slice(0,MAX_DISPLAY_LENGTH)+'...\n【完整请下载】' 
+                : hContent;
+            navigator.clipboard.writeText(txt)
+                .then(()=>showToast('已复制（部分）'))
+                .catch(()=>showToast('复制失败'));
+        });
+
+        // 修复下载（核心）
+        downloadBtn.addEventListener('click', () => {
+            if (!hContent) {
+                showToast('暂无转换结果，无法下载');
+                return;
+            }
+            try {
+                const fn = ttfFile.name.replace(/\.ttf$/i, '.h');
+                // 用 Blob + UTF-8 确保完整写入
+                const blob = new Blob([hContent], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = fn;
+                document.body.appendChild(a);
+                a.click();
+                // 延迟释放，保证下载完成
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                }, 100);
+                showToast(`下载成功：${fn}`);
+            } catch (e) {
+                showToast('下载失败：' + e.message);
+            }
+        });
+
+        function resetProgress() {
+            progressBar.style.width = '0%';
+            progressText.textContent = '转换中... 0%（读取文件）';
+            progressGroup.style.display = 'none';
+        }
+
+        function formatFileSize(b) {
+            if(b<1024) return b+' B';
+            if(b<1048576) return (b/1024).toFixed(2)+' KB';
+            return (b/1048576).toFixed(2)+' MB';
+        }
+
+        function showToast(text) {
+            toast.textContent = text;
+            toast.style.display = 'block';
+            setTimeout(()=>toast.style.display='none', 2000);
+        }
+    </script>
+</body>
+</html>
