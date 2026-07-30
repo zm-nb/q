@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>绘梨衣 · 时计</title>
+    <style>
+        /* ===== 全局重置 ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Serif SC', 'Cinzel', 'Times New Roman', serif;
+            background: #f5ede8;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            color: #5a4a3a;
+        }
+
+        /* ===== 背景图片容器 ===== */
+        .bg-image {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            overflow: hidden;
+            background: #f5ede8;
+        }
+        .bg-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.6;
+            filter: brightness(0.9) saturate(1.1) contrast(1.05);
+        }
+        /* 柔和樱花纹理遮罩 */
+        .bg-image::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(ellipse at 20% 30%, rgba(255, 200, 210, 0.15) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 70%, rgba(255, 180, 200, 0.10) 0%, transparent 50%),
+                repeating-linear-gradient(45deg,
+                    transparent,
+                    transparent 30px,
+                    rgba(255, 200, 210, 0.03) 30px,
+                    rgba(255, 200, 210, 0.03) 31px),
+                repeating-linear-gradient(-45deg,
+                    transparent,
+                    transparent 30px,
+                    rgba(255, 200, 210, 0.03) 30px,
+                    rgba(255, 200, 210, 0.03) 31px);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* ===== 主卡片 ===== */
+        .dragon-card {
+            position: relative;
+            z-index: 2;
+            width: 94%;
+            max-width: 560px;
+            padding: 32px 28px 40px;
+            background: rgba(255, 248, 245, 0.2);
+            backdrop-filter: saturate(1.2);
+            -webkit-backdrop-filter: saturate(1.2);
+            border-radius: 40px 40px 40px 40px;
+            border: 1px solid rgba(255, 200, 210, 0.4);
+            box-shadow:
+                0 20px 60px rgba(180, 120, 140, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.6),
+                0 0 80px rgba(255, 180, 200, 0.06);
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        /* 樱花装饰线 */
+        .dragon-card::before {
+            content: '🌸';
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 22px;
+            opacity: 0.5;
+            filter: drop-shadow(0 0 12px rgba(255, 150, 180, 0.2));
+        }
+        .dragon-card::after {
+            content: '';
+            position: absolute;
+            top: -1px;
+            left: 15%;
+            right: 15%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(255, 180, 200, 0.5), rgba(255, 150, 180, 0.8), rgba(255, 180, 200, 0.5), transparent);
+            border-radius: 50%;
+            filter: blur(1px);
+        }
+
+        /* ===== 绘梨衣徽标 ===== */
+        .dragon-emblem {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 18px;
+            letter-spacing: 6px;
+        }
+        .dragon-emblem .line {
+            flex: 1;
+            max-width: 50px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(200, 150, 160, 0.3));
+        }
+        .dragon-emblem .line.right {
+            background: linear-gradient(90deg, rgba(200, 150, 160, 0.3), transparent);
+        }
+        .dragon-emblem .icon {
+            font-size: 26px;
+            font-weight: 400;
+            color: #7a5a5a;
+            letter-spacing: 4px;
+            opacity: 0.9;
+            text-shadow: 0 0 20px rgba(255, 150, 180, 0.15);
+            font-family: 'Noto Serif SC', serif;
+        }
+        .dragon-emblem .title {
+            font-size: 14px;
+            font-weight: 300;
+            color: rgba(180, 130, 140, 0.5);
+            letter-spacing: 8px;
+            text-transform: uppercase;
+            font-family: 'Cinzel', serif;
+        }
+
+        /* ===== 时间显示 (HH:MM:SS) ===== */
+        .time-display {
+            font-size: 72px;
+            font-weight: 600;
+            font-family: 'Cinzel', 'Times New Roman', serif;
+            letter-spacing: 4px;
+            color: #5a3a3a;
+            text-shadow:
+                0 0 30px rgba(255, 200, 210, 0.08),
+                0 4px 20px rgba(180, 120, 140, 0.1);
+            line-height: 1.1;
+            margin-bottom: 4px;
+            font-variant-numeric: tabular-nums;
+        }
+        /* ===== 时间的冒号（已加深） ===== */
+        .time-display .colon {
+            color: rgba(140, 100, 110, 0.8);
+            margin: 0 2px;
+        }
+
+        /* ===== 日期显示（已加深） ===== */
+        .date-display {
+            font-size: 16px;
+            font-weight: 400;
+            color: rgba(80, 55, 65, 0.85);
+            letter-spacing: 6px;
+            margin-bottom: 24px;
+            font-family: 'Noto Serif SC', serif;
+            text-shadow: 0 2px 12px rgba(255, 200, 210, 0.1);
+        }
+
+        /* ===== 分隔樱花（已加深） ===== */
+        .divider-dragon {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            margin: 12px 0 20px;
+        }
+        .divider-dragon .line {
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(160, 120, 130, 0.35));
+        }
+        .divider-dragon .line.right {
+            background: linear-gradient(90deg, rgba(160, 120, 130, 0.35), transparent);
+        }
+        .divider-dragon .diamond {
+            color: rgba(160, 120, 130, 0.55);
+            font-size: 12px;
+            letter-spacing: 4px;
+        }
+
+        /* ===== 天气信息（整体颜色已加深） ===== */
+        .weather-section {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-top: 6px;
+        }
+        .weather-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 15px;
+            font-weight: 300;
+            color: rgba(80, 55, 65, 0.85);
+            letter-spacing: 1px;
+            text-shadow: 0 2px 8px rgba(255, 200, 210, 0.1);
+        }
+        .weather-item .icon {
+            font-size: 22px;
+            filter: drop-shadow(0 0 8px rgba(255, 150, 180, 0.1));
+        }
+        .weather-item .label {
+            color: rgba(130, 95, 105, 0.7);
+            font-size: 12px;
+            letter-spacing: 2px;
+            margin-right: 2px;
+            font-weight: 400;
+        }
+        .weather-item .value {
+            color: #4a2a2a;
+            font-weight: 500;
+        }
+        .weather-item .value.temp {
+            font-size: 20px;
+            font-weight: 600;
+            color: #4a2a2a;
+        }
+        .weather-item .value.temp sup {
+            font-size: 12px;
+            font-weight: 300;
+            color: rgba(130, 95, 105, 0.6);
+            top: -0.4em;
+        }
+
+        /* ===== 底部箴言 ===== */
+        .footer-verse {
+            margin-top: 24px;
+            font-size: 12px;
+            font-weight: 400;
+            color: rgba(60, 40, 40, 0.7);
+            letter-spacing: 4px;
+            font-family: 'Cinzel', serif;
+            border-top: 1px solid rgba(200, 150, 160, 0.06);
+            padding-top: 18px;
+            text-shadow: 0 2px 8px rgba(255, 200, 210, 0.05);
+        }
+
+        /* ===== 樱花飘落动画 ===== */
+        .sakura-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 3;
+            overflow: hidden;
+        }
+        .sakura-petal {
+            position: absolute;
+            top: -30px;
+            font-size: 20px;
+            opacity: 0.5;
+            animation: fall linear infinite;
+            color: #ffb7c5;
+            text-shadow: 0 0 20px rgba(255, 150, 180, 0.1);
+            user-select: none;
+        }
+        @keyframes fall {
+            0% {
+                transform: translateY(0) rotate(0deg) scale(0.6);
+                opacity: 0.2;
+            }
+            10% {
+                opacity: 0.5;
+            }
+            90% {
+                opacity: 0.5;
+            }
+            100% {
+                transform: translateY(100vh) rotate(720deg) scale(1.2);
+                opacity: 0;
+            }
+        }
+
+        /* ===== 响应式 ===== */
+        @media (max-width: 500px) {
+            .dragon-card {
+                padding: 24px 18px 30px;
+                border-radius: 32px;
+                background: rgba(255, 248, 245, 0.25);
+                backdrop-filter: saturate(1.2);
+                -webkit-backdrop-filter: saturate(1.2);
+            }
+            .time-display {
+                font-size: 48px;
+                letter-spacing: 2px;
+            }
+            .date-display {
+                font-size: 13px;
+                letter-spacing: 4px;
+            }
+            .weather-section {
+                gap: 12px;
+            }
+            .weather-item {
+                font-size: 13px;
+            }
+            .weather-item .value.temp {
+                font-size: 17px;
+            }
+            .dragon-emblem .title {
+                font-size: 12px;
+                letter-spacing: 6px;
+            }
+            .dragon-emblem .icon {
+                font-size: 20px;
+            }
+            .sakura-petal {
+                font-size: 16px;
+            }
+        }
+        @media (max-width: 380px) {
+            .time-display {
+                font-size: 38px;
+            }
+            .weather-item .icon {
+                font-size: 18px;
+            }
+            .weather-item .value.temp {
+                font-size: 15px;
+            }
+            .sakura-petal {
+                font-size: 14px;
+            }
+        }
+
+        /* ===== 字体导入 ===== */
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Noto+Serif+SC:wght@300;400;600;700&display=swap');
+    </style>
+</head>
+<body>
+
+    <!-- ===== 背景图片 ===== -->
+    <div class="bg-image">
+        <img src="https://chuxinya.top/f/XQ8QtO/Image-01-21-45.png" alt="绘梨衣风格背景" loading="lazy">
+    </div>
+
+    <!-- ===== 樱花飘落 ===== -->
+    <div class="sakura-container" id="sakuraContainer"></div>
+
+    <!-- ===== 主卡片 ===== -->
+    <div class="dragon-card">
+
+        <!-- 绘梨衣徽标 -->
+        <div class="dragon-emblem">
+            <span class="line"></span>
+            <span class="icon">🌸 绘梨衣 🌸</span>
+            <span class="line right"></span>
+        </div>
+
+        <!-- 时间 (HH:MM:SS) -->
+        <div class="time-display" id="timeDisplay">
+            <span id="hours">--</span><span class="colon">:</span><span id="minutes">--</span><span class="colon">:</span><span id="seconds" class="seconds">--</span>
+        </div>
+        <div class="date-display" id="dateDisplay">----年 --月 --日</div>
+
+        <!-- 分隔 -->
+        <div class="divider-dragon">
+            <span class="line"></span>
+            <span class="diamond">✿ ◇ ✿</span>
+            <span class="line right"></span>
+        </div>
+
+        <!-- 天气 -->
+        <div class="weather-section" id="weatherSection">
+            <div class="weather-item">
+                <span class="icon" id="weatherIcon">🌤</span>
+                <span class="value" id="weatherDesc">--</span>
+            </div>
+            <div class="weather-item">
+                <span class="label">温度</span>
+                <span class="value temp" id="weatherTemp">--<sup>°</sup></span>
+            </div>
+            <div class="weather-item">
+                <span class="label">湿度</span>
+                <span class="value" id="weatherHumidity">--<sup>%</sup></span>
+            </div>
+            <div class="weather-item">
+                <span class="label">风速</span>
+                <span class="value" id="weatherWind">--<sup>km/h</sup></span>
+            </div>
+        </div>
+
+        <!-- 底部箴言 -->
+        <div class="footer-verse">✦ さくら · 永 恒 之 刻 ✦</div>
+    </div>
+
+    <script>
+        // ================================================================
+        //  绘梨衣风格 · 时间 + 天气 + 樱花飘落
+        // ================================================================
+
+        // ---------- DOM 引用 ----------
+        const hoursEl = document.getElementById('hours');
+        const minutesEl = document.getElementById('minutes');
+        const secondsEl = document.getElementById('seconds');
+        const dateEl = document.getElementById('dateDisplay');
+
+        const weatherIcon = document.getElementById('weatherIcon');
+        const weatherDesc = document.getElementById('weatherDesc');
+        const weatherTemp = document.getElementById('weatherTemp');
+        const weatherHumidity = document.getElementById('weatherHumidity');
+        const weatherWind = document.getElementById('weatherWind');
+
+        // ---------- 工具函数 ----------
+        function pad(n) { return String(n).padStart(2, '0'); }
+
+        // ---------- 更新时间 ----------
+        function updateClock() {
+            const now = new Date();
+            const h = now.getHours();
+            const m = now.getMinutes();
+            const s = now.getSeconds();
+
+            hoursEl.textContent = pad(h);
+            minutesEl.textContent = pad(m);
+            secondsEl.textContent = pad(s);
+
+            const year = now.getFullYear();
+            const month = now.getMonth() + 1;
+            const day = now.getDate();
+            const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+            const wd = weekdays[now.getDay()];
+            dateEl.textContent = `${year}年 ${pad(month)}月 ${pad(day)}日 · 周${wd}`;
+        }
+
+        // ---------- 获取天气 (免费 Open-Meteo API) ----------
+        async function fetchWeather() {
+            try {
+                const geoResp = await fetch('https://ip-api.com/json/?fields=lat,lon,city,country');
+                const geoData = await geoResp.json();
+                const lat = geoData.lat || 39.9;
+                const lon = geoData.lon || 116.4;
+
+                const url =
+                    `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m&timezone=auto`;
+                const resp = await fetch(url);
+                const data = await resp.json();
+
+                if (data.current_weather) {
+                    const cw = data.current_weather;
+                    const temp = Math.round(cw.temperature);
+                    const wmoCode = cw.weathercode;
+                    const wind = cw.windspeed;
+
+                    const wmoMap = {
+                        0: { icon: '☀️', desc: '晴天' },
+                        1: { icon: '🌤', desc: '少云' },
+                        2: { icon: '⛅', desc: '多云' },
+                        3: { icon: '☁️', desc: '阴天' },
+                        45: { icon: '🌫', desc: '雾' },
+                        48: { icon: '🌫', desc: '雾' },
+                        51: { icon: '🌧', desc: '小毛毛雨' },
+                        53: { icon: '🌧', desc: '毛毛雨' },
+                        55: { icon: '🌧', desc: '大毛毛雨' },
+                        61: { icon: '🌦', desc: '小雨' },
+                        63: { icon: '🌧', desc: '中雨' },
+                        65: { icon: '🌧', desc: '大雨' },
+                        71: { icon: '🌨', desc: '小雪' },
+                        73: { icon: '🌨', desc: '中雪' },
+                        75: { icon: '❄️', desc: '大雪' },
+                        80: { icon: '🌦', desc: '阵雨' },
+                        81: { icon: '🌧', desc: '中阵雨' },
+                        82: { icon: '⛈', desc: '大阵雨' },
+                        95: { icon: '⛈', desc: '雷暴' },
+                        96: { icon: '⛈', desc: '雷暴' },
+                        99: { icon: '⛈', desc: '雷暴' },
+                    };
+                    const info = wmoMap[wmoCode] || { icon: '🌤', desc: '未知' };
+
+                    weatherIcon.textContent = info.icon;
+                    weatherDesc.textContent = info.desc;
+                    weatherTemp.innerHTML = `${temp}<sup>°</sup>`;
+
+                    if (data.hourly && data.hourly.relative_humidity_2m && data.hourly.relative_humidity_2m.length > 0) {
+                        const hum = Math.round(data.hourly.relative_humidity_2m[0]);
+                        weatherHumidity.textContent = `${hum}%`;
+                    } else {
+                        weatherHumidity.textContent = '--%';
+                    }
+
+                    weatherWind.textContent = `${Math.round(wind)} km/h`;
+                } else {
+                    throw new Error('无天气数据');
+                }
+            } catch (err) {
+                console.warn('天气获取失败，使用降级数据', err);
+                weatherIcon.textContent = '🌤';
+                weatherDesc.textContent = '--';
+                weatherTemp.innerHTML = '--<sup>°</sup>';
+                weatherHumidity.textContent = '--%';
+                weatherWind.textContent = '-- km/h';
+            }
+        }
+
+        // ---------- 樱花飘落效果 ----------
+        function createSakura() {
+            const container = document.getElementById('sakuraContainer');
+            const petals = ['🌸', '🌸', '🌸', '✿', '🌸', '🌸'];
+            const count = 28;
+
+            for (let i = 0; i < count; i++) {
+                const petal = document.createElement('div');
+                petal.className = 'sakura-petal';
+                petal.textContent = petals[Math.floor(Math.random() * petals.length)];
+                petal.style.left = Math.random() * 100 + '%';
+                petal.style.fontSize = (12 + Math.random() * 16) + 'px';
+                petal.style.animationDuration = (8 + Math.random() * 14) + 's';
+                petal.style.animationDelay = (Math.random() * 20) + 's';
+                petal.style.opacity = 0.2 + Math.random() * 0.3;
+                container.appendChild(petal);
+            }
+        }
+
+        // ---------- 初始化 ----------
+        updateClock();
+        fetchWeather();
+        createSakura();
+
+        setInterval(updateClock, 1000);
+        setInterval(fetchWeather, 600000);
+
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                updateClock();
+                fetchWeather();
+            }
+        });
+    </script>
+
+</body>
+</html>
